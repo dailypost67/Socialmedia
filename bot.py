@@ -25,9 +25,11 @@ conn.commit()
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     welcome_text = (
-        "👋 Namaste! Main aapka Automated Script Bot hoon.\n\n"
-        "📌 Mujhe apni service/business ka topic bhejiye (jaise: 'Digital Marketing'), "
-        "main roz us par AI script aur voiceover tayar karunga!"
+        "👋 Namaste! Main aapka AI Video Content Bot hoon.\n\n"
+        "📌 Mujhe apne business ya video ka topic bhejiye, main aapke liye:\n"
+        "1. AI Promotional Script 📝\n"
+        "2. Audio Voiceover (.mp3) 🎙️\n"
+        "tayyar karke doonga!"
     )
     bot.reply_to(message, welcome_text)
 
@@ -40,15 +42,33 @@ def handle_message(message):
     cursor.execute('INSERT OR REPLACE INTO user_topics (user_id, topic) VALUES (?, ?)', (user_id, topic))
     conn.commit()
     
+    bot.reply_to(message, "⏳ Thoda intezaar karein, AI script aur voiceover taiyar ho raha hai...")
+
     # Gemini AI se script banwayein
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(f"Write a short promotional script in Hinglish for: {topic}")
+        response = model.generate_content(f"Write a short, engaging promotional script in Hinglish for: {topic}")
         script = response.text
     except Exception as e:
-        script = f"Topic saved: {topic}"
+        script = f"Topic: {topic}\n(Script generation failed, please try again.)"
 
-    bot.reply_to(message, f"✅ **Topic Saved Successfully!**\n\n📝 **Generated Script:**\n{script}")
+    # Send Script text
+    bot.send_message(user_id, f"📝 **Generated Script:**\n\n{script}")
+
+    # Generate Voiceover Audio (gTTS)
+    try:
+        tts = gTTS(text=script, lang='hi')
+        audio_path = "voiceover.mp3"
+        tts.save(audio_path)
+        
+        # Send Audio file to user
+        with open(audio_path, 'rb') as audio:
+            bot.send_audio(user_id, audio, caption="🎙️ Yeh lijiye aapka AI Voiceover!")
+        
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+    except Exception as e:
+        bot.send_message(user_id, "⚠️ Voiceover generate karne mein choti si problem aayi.")
 
 if __name__ == "__main__":
     print("Bot cloud par chalu ho raha hai...")
